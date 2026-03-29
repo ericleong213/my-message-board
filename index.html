@@ -1,125 +1,73 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <title>簡易留言板</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-        body {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 0 20px;
-            background: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        button {
-            background: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background: #45a049;
-        }
-        .message {
-            border-bottom: 1px solid #eee;
-            padding: 15px 0;
-            margin: 10px 0;
-        }
-        .name {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        .time {
-            color: #7f8c8d;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        .content {
-            margin-top: 5px;
-            line-height: 1.5;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公開留言板</title>
+<style>
+  *{box-sizing:border-box;font-family:Arial,sans-serif}
+  body{max-width:700px;margin:30px auto;padding:0 20px;background:#f7f9fa}
+  .box{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px #0001}
+  input,textarea{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px}
+  button{background:#0b99ff;color:white;padding:12px 20px;border:none;border-radius:8px;cursor:pointer}
+  .msg{background:#f1f3f4;padding:12px;border-radius:8px;margin:10px 0}
+  .name{font-weight:bold}
+  .time{color:#666;font-size:12px;margin-left:10px}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h2>📝 簡易留言板</h2>
-        
-        <!-- 留言表單 -->
-        <input type="text" id="name" placeholder="輸入你的名字" required>
-        <textarea id="content" rows="4" placeholder="輸入留言內容" required></textarea>
-        <button onclick="sendMsg()">送出留言</button>
+<div class="box">
+  <h2>公開留言板</h2>
+  <input id="name" placeholder="輸入名字">
+  <textarea id="content" rows="4" placeholder="輸入留言"></textarea>
+  <button onclick="send()">送出留言</button>
+  <hr style="margin:20px 0">
+  <h3>所有留言</h3>
+  <div id="list"></div>
+</div>
 
-        <hr>
-        <h3>💬 所有留言</h3>
-        <div id="msgList"></div>
-    </div>
+<script>
+// 已經幫你填好你的 Google Sheet ID
+const SHEET_ID = "1Lu43TPq-T8mlPRzC6PridtCH0ljgNKwCYFkBlGmf_fs";
 
-    <script>
-        // 頁面載入時自動顯示留言
-        window.onload = showMsg;
+// 讀取留言
+async function load() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+  const res = await fetch(url);
+  const text = await res.text();
+  const json = JSON.parse(text.replace(/.*\(/,'').replace(/\)$/,''));
+  const rows = json.table.rows;
 
-        // 送出留言
-        function sendMsg() {
-            let name = document.getElementById("name").value;
-            let content = document.getElementById("content").value;
-            let time = new Date().toLocaleString();
+  let html = '';
+  for (let i = 1; i < rows.length; i++) {
+    const name = rows[i].c[0]?.v ?? '';
+    const content = rows[i].c[1]?.v ?? '';
+    const time = rows[i].c[2]?.v ?? '';
+    html += `
+    <div class="msg">
+      <span class="name">${name}</span>
+      <span class="time">${time}</span>
+      <div>${content}</div>
+    </div>`;
+  }
+  document.getElementById("list").innerHTML = html;
+}
 
-            if (!name || !content) {
-                alert("請填寫名字與內容！");
-                return;
-            }
+// 提交留言（這邊需要搭配 Google Apps Script 才會真的寫入）
+async function send() {
+  const name = document.getElementById("name").value.trim();
+  const content = document.getElementById("content").value.trim();
+  if (!name || !content) return alert("請填寫名字與留言");
 
-            // 建立留言物件
-            let msg = { name, content, time };
-            
-            // 從本機抓舊資料 → 加入新留言 → 存回去
-            let msgs = JSON.parse(localStorage.getItem("msgs")) || [];
-            msgs.unshift(msg); // 新留言放最上面
-            localStorage.setItem("msgs", JSON.stringify(msgs));
+  const time = new Date().toLocaleString();
+  alert("留言已送出（目前只會顯示，不會寫入試算表，需要我幫你設定 Google Apps Script 嗎？）");
+  
+  document.getElementById("name").value = "";
+  document.getElementById("content").value = "";
+  load();
+}
 
-            // 清空表單 & 更新顯示
-            document.getElementById("name").value = "";
-            document.getElementById("content").value = "";
-            showMsg();
-        }
-
-        // 顯示所有留言
-        function showMsg() {
-            let msgs = JSON.parse(localStorage.getItem("msgs")) || [];
-            let html = "";
-
-            for (let m of msgs) {
-                html += `
-                <div class="message">
-                    <span class="name">${m.name}</span>
-                    <span class="time">${m.time}</span>
-                    <div class="content">${m.content}</div>
-                </div>
-                `;
-            }
-
-            document.getElementById("msgList").innerHTML = html;
-        }
-    </script>
+load();
+</script>
 </body>
 </html>
