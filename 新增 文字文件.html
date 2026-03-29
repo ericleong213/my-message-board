@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>簡易留言板</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .message {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+            margin: 10px 0;
+        }
+        .name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .time {
+            color: #7f8c8d;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .content {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📝 簡易留言板</h2>
+        
+        <!-- 留言表單 -->
+        <input type="text" id="name" placeholder="輸入你的名字" required>
+        <textarea id="content" rows="4" placeholder="輸入留言內容" required></textarea>
+        <button onclick="sendMsg()">送出留言</button>
+
+        <hr>
+        <h3>💬 所有留言</h3>
+        <div id="msgList"></div>
+    </div>
+
+    <script>
+        // 頁面載入時自動顯示留言
+        window.onload = showMsg;
+
+        // 送出留言
+        function sendMsg() {
+            let name = document.getElementById("name").value;
+            let content = document.getElementById("content").value;
+            let time = new Date().toLocaleString();
+
+            if (!name || !content) {
+                alert("請填寫名字與內容！");
+                return;
+            }
+
+            // 建立留言物件
+            let msg = { name, content, time };
+            
+            // 從本機抓舊資料 → 加入新留言 → 存回去
+            let msgs = JSON.parse(localStorage.getItem("msgs")) || [];
+            msgs.unshift(msg); // 新留言放最上面
+            localStorage.setItem("msgs", JSON.stringify(msgs));
+
+            // 清空表單 & 更新顯示
+            document.getElementById("name").value = "";
+            document.getElementById("content").value = "";
+            showMsg();
+        }
+
+        // 顯示所有留言
+        function showMsg() {
+            let msgs = JSON.parse(localStorage.getItem("msgs")) || [];
+            let html = "";
+
+            for (let m of msgs) {
+                html += `
+                <div class="message">
+                    <span class="name">${m.name}</span>
+                    <span class="time">${m.time}</span>
+                    <div class="content">${m.content}</div>
+                </div>
+                `;
+            }
+
+            document.getElementById("msgList").innerHTML = html;
+        }
+    </script>
+</body>
+</html>
