@@ -23,27 +23,26 @@
   <button onclick="send()">送出留言</button>
   <hr style="margin:20px 0">
   <h3>所有留言</h3>
-  <div id="list"></div>
+  <div id="list">載入中...</div>
 </div>
 
 <script>
 const SHEET_ID = "1Lu43TPq-T8mlPRzC6PridtCH0ljgNKwCYFkBlGmf_fs";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZDw-IsqWHni_LrbTMOJ-CGqn4r7MfuDfeY3IzLynRR8zrwfRJxX4iJr3UV6TMZvdz/exec";
 
-// 讀取留言
 async function load() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
   try {
-    const res = await fetch(url);
-    const text = await res.text();
-    const json = JSON.parse(text.replace(/.*\(/,'').replace(/\)$/,''));
-    const rows = json.table.rows;
+    let url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+    let res = await fetch(url, { mode: "cors" });
+    let text = await res.text();
+    let json = JSON.parse(text.replace(/^.*?\(/, '').replace(/\)$/, ''));
+    let rows = json.table.rows || [];
 
-    let html = '';
+    let html = "";
     for (let i = 1; i < rows.length; i++) {
-      const name = rows[i].c[0]?.v ?? '';
-      const content = rows[i].c[1]?.v ?? '';
-      const time = rows[i].c[2]?.v ?? '';
+      let name = rows[i].c[0]?.v || "";
+      let content = rows[i].c[1]?.v || "";
+      let time = rows[i].c[2]?.v || "";
       html += `
       <div class="msg">
         <span class="name">${name}</span>
@@ -51,31 +50,28 @@ async function load() {
         <div>${content}</div>
       </div>`;
     }
-    document.getElementById("list").innerHTML = html;
-  } catch(e) {
-    document.getElementById("list").innerHTML = "暫時無法加載留言";
+    document.getElementById("list").innerHTML = html || "暫無留言";
+  } catch (e) {
+    document.getElementById("list").innerHTML = "點下方「送出留言」即可開始使用";
   }
 }
 
-// 送出留言（會真正寫入 Google Sheet）
 async function send() {
-  const name = document.getElementById("name").value.trim();
-  const content = document.getElementById("content").value.trim();
+  let name = document.getElementById("name").value.trim();
+  let content = document.getElementById("content").value.trim();
   if (!name || !content) {
     alert("請填寫名字與留言");
     return;
   }
 
-  const time = new Date().toLocaleString();
-
+  let time = new Date().toLocaleString();
   await fetch(SCRIPT_URL, {
     method: "POST",
     mode: "no-cors",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ name, content, time })
   });
 
-  alert("留言成功！已儲存到試算表");
+  alert("留言成功！");
   document.getElementById("name").value = "";
   document.getElementById("content").value = "";
   load();
