@@ -7,7 +7,7 @@
 <style>
   *{box-sizing:border-box;font-family:Arial,sans-serif}
   body{max-width:700px;margin:30px auto;padding:0 20px;background:#f7f9fa}
-  .box{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px #0001}
+  .box{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
   input,textarea{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px}
   button{background:#0b99ff;color:white;padding:12px 20px;border:none;border-radius:8px;cursor:pointer}
   .msg{background:#f1f3f4;padding:12px;border-radius:8px;margin:10px 0}
@@ -27,41 +27,55 @@
 </div>
 
 <script>
-// 已經幫你填好你的 Google Sheet ID
 const SHEET_ID = "1Lu43TPq-T8mlPRzC6PridtCH0ljgNKwCYFkBlGmf_fs";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZDw-IsqWHni_LrbTMOJ-CGqn4r7MfuDfeY3IzLynRR8zrwfRJxX4iJr3UV6TMZvdz/exec";
 
 // 讀取留言
 async function load() {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-  const res = await fetch(url);
-  const text = await res.text();
-  const json = JSON.parse(text.replace(/.*\(/,'').replace(/\)$/,''));
-  const rows = json.table.rows;
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text.replace(/.*\(/,'').replace(/\)$/,''));
+    const rows = json.table.rows;
 
-  let html = '';
-  for (let i = 1; i < rows.length; i++) {
-    const name = rows[i].c[0]?.v ?? '';
-    const content = rows[i].c[1]?.v ?? '';
-    const time = rows[i].c[2]?.v ?? '';
-    html += `
-    <div class="msg">
-      <span class="name">${name}</span>
-      <span class="time">${time}</span>
-      <div>${content}</div>
-    </div>`;
+    let html = '';
+    for (let i = 1; i < rows.length; i++) {
+      const name = rows[i].c[0]?.v ?? '';
+      const content = rows[i].c[1]?.v ?? '';
+      const time = rows[i].c[2]?.v ?? '';
+      html += `
+      <div class="msg">
+        <span class="name">${name}</span>
+        <span class="time">${time}</span>
+        <div>${content}</div>
+      </div>`;
+    }
+    document.getElementById("list").innerHTML = html;
+  } catch(e) {
+    document.getElementById("list").innerHTML = "暫時無法加載留言";
   }
-  document.getElementById("list").innerHTML = html;
 }
 
-// 提交留言（這邊需要搭配 Google Apps Script 才會真的寫入）
+// 送出留言（會真正寫入 Google Sheet）
 async function send() {
   const name = document.getElementById("name").value.trim();
   const content = document.getElementById("content").value.trim();
-  if (!name || !content) return alert("請填寫名字與留言");
+  if (!name || !content) {
+    alert("請填寫名字與留言");
+    return;
+  }
 
   const time = new Date().toLocaleString();
-  alert("留言已送出（目前只會顯示，不會寫入試算表，需要我幫你設定 Google Apps Script 嗎？）");
-  
+
+  await fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ name, content, time })
+  });
+
+  alert("留言成功！已儲存到試算表");
   document.getElementById("name").value = "";
   document.getElementById("content").value = "";
   load();
